@@ -85,6 +85,22 @@ st.sidebar.info(f"📱 Expected format: {expected_length} digits (without countr
 tag = st.sidebar.text_input("Tag (Optional)", help="Tag for tracking messages")
 unicode_enabled = st.sidebar.checkbox("Unicode Enabled", value=True)
 
+# Option to add STOP CODE for compliance
+st.sidebar.markdown("---")
+st.sidebar.markdown("**📋 Compliance (India & Some Routes)**")
+add_stop_code = st.sidebar.checkbox(
+    "Add opt-out code to preserve sender name",
+    value=False,
+    help="For India and some routes: Adds 'Reply STOP to opt-out' or similar text. Required by Brevo on certain routes to show sender name instead of phone number."
+)
+
+if add_stop_code:
+    stop_text = st.sidebar.text_input(
+        "Opt-out text:",
+        value="Reply STOP to opt-out",
+        help="This text will be added at the end of your message for compliance"
+    )
+
 # Function to validate and format phone number
 def format_phone_number(phone, country_code, expected_length):
     """
@@ -237,13 +253,25 @@ if uploaded_file is not None:
                 sample_row = contacts_df.iloc[0].to_dict()
                 preview_message = personalize_message(sms_content, sample_row)
                 
+                # Build complete preview
+                complete_preview = preview_message
+                
+                # Add opt-out if enabled
+                if add_stop_code and stop_text:
+                    complete_preview = f"{preview_message}. {stop_text}"
+                
                 # Show with organization prefix if provided
                 if org_prefix:
-                    preview_with_prefix = f"{org_prefix}: {preview_message}"
-                    st.text_area("Preview (first contact) with prefix:", preview_with_prefix, height=100, disabled=True)
-                    st.caption(f"Organization prefix '{org_prefix}' will be added by Brevo")
+                    complete_preview = f"{org_prefix}: {complete_preview}"
+                    st.text_area("Preview (first contact) with prefix:", complete_preview, height=100, disabled=True)
+                    st.caption(f"✓ Organization prefix '{org_prefix}' will be added by Brevo")
                 else:
-                    st.text_area("Preview (first contact):", preview_message, height=100, disabled=True)
+                    st.text_area("Preview (first contact):", complete_preview, height=100, disabled=True)
+                
+                # Show character count warning
+                char_count_preview = len(complete_preview)
+                if char_count_preview > 160:
+                    st.warning(f"⚠️ Message is {char_count_preview} characters. Will be sent as {(char_count_preview // 160) + 1} SMS parts.")
             
     except Exception as e:
         st.error(f"Error reading file: {str(e)}")
@@ -364,6 +392,10 @@ if data_available:
             else:
                 personalized_content = sms_content
                 display_name = original_number
+            
+            # Add opt-out text if enabled
+            if add_stop_code and stop_text:
+                personalized_content = f"{personalized_content}. {stop_text}"
             
             status_text.text(f"Sending to {display_name} ({idx + 1}/{len(formatted_contacts)})...")
             

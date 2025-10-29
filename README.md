@@ -189,29 +189,44 @@ phone_number
 ### Sender Name
 The **Sender Name** field (max 11 characters) determines who the SMS appears to be from. This is your SMS sender ID.
 
+**⚠️ Important for India & Some Routes:**
+According to Brevo's documentation, on some routes (especially India), the alphanumeric sender ID may be replaced with a short code phone number for **marketing** type SMS. To help preserve your sender name, Brevo recommends:
+
+1. **Use Organization Prefix** - Adds your brand name before the message
+2. **Add opt-out compliance text** - Like "Reply STOP to opt-out"
+
 ### Organization Prefix (Recommended)
-The **Organization Prefix** is a brand name that Brevo adds **before** your message content. This is especially recommended by U.S. carriers to ensure recipients recognize you.
+The **Organization Prefix** is a brand name that Brevo adds **before** your message content. Recommended by carriers and helps with sender name preservation.
 
 **Example:**
 
 **Configuration:**
 - Sender Name: `AHC`
 - Organization Prefix: `AHC`
+- Add opt-out: ✓ Enabled
+- Opt-out text: `Reply STOP to opt-out`
 - Message: `Hi {name}, your order is ready!`
 
 **What recipient sees:**
 ```
 From: AHC
-Message: AHC: Hi John, your order is ready!
+Message: AHC: Hi John, your order is ready! Reply STOP to opt-out
 ```
 
-**Important:** Keep your total message length (prefix + message) under 160 characters to avoid splitting into multiple SMS.
+**Important:** Keep your total message length (prefix + message + opt-out) under 160 characters to avoid splitting into multiple SMS.
 
-**Why use Organization Prefix?**
+### Why use these features?
+
+**Organization Prefix:**
 - ✅ Better brand recognition
 - ✅ Higher trust from recipients  
 - ✅ Recommended by carriers
-- ✅ Helps preserve sender name on some routes (like India)
+- ✅ Helps preserve sender name
+
+**Opt-out text:**
+- ✅ Compliance with marketing SMS regulations
+- ✅ Required on some routes (like India) to show sender name
+- ✅ Professional and transparent
 
 ---
 
