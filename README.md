@@ -99,20 +99,31 @@ streamlit run sms_sender.py
 
 ### Excel/CSV Format (with Personalization)
 ```csv
-name,phone_number,company
+customer_name,phone_number,company
 John Doe,1234567890,ABC Corp
 Jane Smith,11234567891,XYZ Inc
 Bob Johnson,9876543210,Tech Ltd
+Alice Williams,15551234567,Global Solutions
 ```
 
-**Example SMS Message:**
+**Example SMS Message (Using First Name):**
 ```
 Hi {name}, thank you for choosing {company}! Your order is ready for pickup.
 ```
 
 **Result for first contact:**
 ```
-Hi John Doe, thank you for choosing ABC Corp! Your order is ready for pickup.
+Hi John, thank you for choosing ABC Corp! Your order is ready for pickup.
+```
+
+**Example SMS Message (Using Full Name):**
+```
+Dear {customer_name}, your order from {company} is ready.
+```
+
+**Result for first contact:**
+```
+Dear John Doe, your order from ABC Corp is ready.
 ```
 
 ### CSV Format (Basic)
@@ -134,7 +145,9 @@ phone_number
 
 ### Personalized Messaging
 - **Dynamic variables**: Use `{columnname}` to insert data from your file
-- **Auto-aliasing**: `{name}` and `{username}` automatically map to your selected name column
+- **Smart name extraction**: `{name}` and `{username}` automatically use **first name only** from full names
+  - Example: "John Doe" → `{name}` = "John"
+  - Use `{full_column_name}` to get the complete name if needed
 - **Any column**: Use any column from your Excel/CSV as a variable
 - **Live preview**: See exactly how messages will look before sending
 

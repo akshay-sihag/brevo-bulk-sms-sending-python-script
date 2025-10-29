@@ -49,11 +49,18 @@ Your appointment is confirmed for {appointment_date}. Reply CONFIRM to verify.
 
 ## Available Variables
 
-### Auto-Aliasing
+### Auto-Aliasing with Smart First Name Extraction
 
-When you select a name column, these aliases are automatically created:
-- `{name}` → Maps to your selected name column
-- `{username}` → Maps to your selected name column
+When you select a name column, these aliases are automatically created with **first name only**:
+- `{name}` → **First name only** from your selected name column
+- `{username}` → **First name only** from your selected name column
+
+**Example:**
+- Your column has: "John Doe"
+- `{name}` becomes: "John"
+- `{username}` becomes: "John"
+
+If you want the **full name**, use the original column name (e.g., `{full_name}` or whatever your column is called).
 
 ### Any Column Name
 
@@ -81,12 +88,46 @@ Hi {name}, your {company} order is ready!
 Hi John Doe, your ABC Corp order is ready!
 ```
 
+## First Name vs Full Name Examples
+
+**Your Excel/CSV has:**
+```
+customer_name      | phone_number
+------------------ | ------------
+John Doe           | 1234567890
+Sarah Smith        | 9876543210
+Robert Johnson     | 5551234567
+```
+
+### Using First Name Only (Recommended)
+**Message:**
+```
+Hi {name}, your order is ready for pickup!
+```
+
+**Results:**
+- "Hi John, your order is ready for pickup!"
+- "Hi Sarah, your order is ready for pickup!"
+- "Hi Robert, your order is ready for pickup!"
+
+### Using Full Name
+**Message:**
+```
+Dear {customer_name}, thank you for your business.
+```
+
+**Results:**
+- "Dear John Doe, thank you for your business."
+- "Dear Sarah Smith, thank you for your business."
+- "Dear Robert Johnson, thank you for your business."
+
 ## Real-World Examples
 
 ### 1. Appointment Reminders
 ```
 Hi {name}, reminder: Your appointment with Dr. {doctor} is on {date} at {time}. Reply C to confirm.
 ```
+*Note: {name} will be "John" not "John Doe"*
 
 ### 2. Order Notifications
 ```

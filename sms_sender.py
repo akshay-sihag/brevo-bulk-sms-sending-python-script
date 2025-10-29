@@ -173,14 +173,23 @@ if uploaded_file is not None:
             
             # Show available variables
             if name_column != "None":
-                st.info(f"💡 Use `{{{name_column}}}` in your message to personalize with names")
-                # Create a mapping for common aliases
-                contacts_df['name'] = contacts_df[name_column]
-                contacts_df['username'] = contacts_df[name_column]
+                # Extract first name only (before the first space)
+                contacts_df['name'] = contacts_df[name_column].apply(
+                    lambda x: str(x).split()[0] if pd.notna(x) and str(x).strip() and ' ' in str(x) else str(x)
+                )
+                contacts_df['username'] = contacts_df['name']
+                
+                st.info(f"💡 Use `{{name}}` or `{{username}}` for first name only, `{{{name_column}}}` for full name")
             
             # Show all available variables
             available_vars = [f"{{{col}}}" for col in contacts_df.columns]
             st.markdown(f"**Available variables:** {', '.join(available_vars)}")
+            
+            # Show example of first name extraction
+            if name_column != "None" and len(contacts_df) > 0:
+                sample_full_name = contacts_df.iloc[0][name_column]
+                sample_first_name = contacts_df.iloc[0]['name']
+                st.caption(f"Example: Full name `{{{name_column}}}` = \"{sample_full_name}\" → First name `{{name}}` = \"{sample_first_name}\"")
             
             # Preview personalized message
             if sms_content and len(contacts_df) > 0:
@@ -300,7 +309,11 @@ if data_available:
             # Personalize message if data available
             if use_personalization and contact_data:
                 personalized_content = personalize_message(sms_content, contact_data)
-                display_name = contact_data.get(name_column, original_number) if name_column != "None" else original_number
+                # Use first name for display if available
+                if name_column != "None" and 'name' in contact_data:
+                    display_name = contact_data['name']  # This is the first name
+                else:
+                    display_name = contact_data.get(name_column, original_number) if name_column != "None" else original_number
             else:
                 personalized_content = sms_content
                 display_name = original_number
