@@ -32,7 +32,14 @@ except (FileNotFoundError, KeyError):
 sender_name = st.sidebar.text_input(
     "Sender Name",
     max_chars=11,
-    help="Max 11 characters for alphanumeric, 15 for numeric"
+    help="Max 11 characters for alphanumeric, 15 for numeric. Will appear as SMS sender."
+)
+
+# Organization prefix (brand name)
+org_prefix = st.sidebar.text_input(
+    "Organization Prefix (Optional)",
+    max_chars=15,
+    help="Brand name added before message content. Recommended by carriers. Keep total message under 160 chars to avoid splitting."
 )
 
 # SMS Content
@@ -75,13 +82,6 @@ expected_length = country_options[selected_country]["length"]
 
 st.sidebar.info(f"📱 Expected format: {expected_length} digits (without country code)")
 
-# Add stop code option
-add_stop_code = st.sidebar.checkbox(
-    "Add [STOP CODE] to preserve sender name", 
-    value=True,
-    help="Required for marketing SMS to show sender name instead of phone number on some routes (like India). Brevo will replace [STOP CODE] with an unsubscribe code."
-)
-
 tag = st.sidebar.text_input("Tag (Optional)", help="Tag for tracking messages")
 unicode_enabled = st.sidebar.checkbox("Unicode Enabled", value=True)
 
@@ -110,12 +110,12 @@ def format_phone_number(phone, country_code, expected_length):
         return None  # Invalid format
 
 # Function to send SMS via Brevo API
-def send_sms(api_key, sender, recipient, content, sms_type="marketing", tag=None, unicode_enabled=True):
+def send_sms(api_key, sender, recipient, content, sms_type="marketing", tag=None, unicode_enabled=True, org_prefix=None):
     """
     Send SMS using Brevo API
     Returns: (success: bool, message_id: str, error: str)
     """
-    url = "https://api.brevo.com/v3/transactionalSMS/sms"
+    url = "https://api.brevo.com/v3/transactionalSMS/send"
     
     headers = {
         "accept": "application/json",
@@ -133,6 +133,9 @@ def send_sms(api_key, sender, recipient, content, sms_type="marketing", tag=None
     
     if tag:
         payload["tag"] = tag
+    
+    if org_prefix:
+        payload["organisationPrefix"] = org_prefix
     
     try:
         response = requests.post(url, json=payload, headers=headers)
@@ -234,15 +237,13 @@ if uploaded_file is not None:
                 sample_row = contacts_df.iloc[0].to_dict()
                 preview_message = personalize_message(sms_content, sample_row)
                 
-                # Add [STOP CODE] to preview if enabled
-                if add_stop_code and '[STOP CODE]' not in preview_message:
-                    preview_message_with_stop = preview_message + ' [STOP CODE]'
+                # Show with organization prefix if provided
+                if org_prefix:
+                    preview_with_prefix = f"{org_prefix}: {preview_message}"
+                    st.text_area("Preview (first contact) with prefix:", preview_with_prefix, height=100, disabled=True)
+                    st.caption(f"Organization prefix '{org_prefix}' will be added by Brevo")
                 else:
-                    preview_message_with_stop = preview_message
-                
-                st.text_area("Preview (first contact):", preview_message_with_stop, height=100, disabled=True)
-                if add_stop_code:
-                    st.caption("✅ [STOP CODE] will be replaced by Brevo with an unsubscribe code to preserve sender name")
+                    st.text_area("Preview (first contact):", preview_message, height=100, disabled=True)
             
     except Exception as e:
         st.error(f"Error reading file: {str(e)}")
@@ -364,10 +365,6 @@ if data_available:
                 personalized_content = sms_content
                 display_name = original_number
             
-            # Add [STOP CODE] if enabled (for marketing SMS to preserve sender name)
-            if add_stop_code and '[STOP CODE]' not in personalized_content:
-                personalized_content = personalized_content + ' [STOP CODE]'
-            
             status_text.text(f"Sending to {display_name} ({idx + 1}/{len(formatted_contacts)})...")
             
             success, message_id, error = send_sms(
@@ -377,7 +374,8 @@ if data_available:
                 content=personalized_content,
                 sms_type="marketing",
                 tag=tag,
-                unicode_enabled=unicode_enabled
+                unicode_enabled=unicode_enabled,
+                org_prefix=org_prefix if org_prefix else None
             )
             
             # Record result

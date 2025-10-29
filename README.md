@@ -61,9 +61,9 @@ streamlit run sms_sender.py
 2. **Configure the app:**
    - API key will be automatically loaded from secrets ✅
    - **Select your country code** from the dropdown (e.g., 🇮🇳 India +91, 🇺🇸 US/Canada +1)
-   - Set the Sender Name (max 11 characters for alphanumeric)
+   - Set the **Sender Name** (max 11 characters) - This appears as the SMS sender
+   - Optionally set **Organization Prefix** - Your brand name added before message (e.g., "AHC:")
    - Write your SMS message content
-   - **Enable "Add [STOP CODE]"** (checked by default) - Required to show sender name on most routes
    - Optionally add a tag for tracking
 
 3. **Upload contact list:**
@@ -184,47 +184,34 @@ phone_number
 - Timestamp for each message
 - Downloadable CSV report with all details
 
-## 📛 Sender Name vs Phone Number Issue
+## 📛 Sender Name & Organization Prefix
 
-### Why Am I Seeing a Phone Number Instead of Sender Name?
+### Sender Name
+The **Sender Name** field (max 11 characters) determines who the SMS appears to be from. This is your SMS sender ID.
 
-According to [Brevo's SMS API documentation](https://developers.brevo.com/docs/transactional-sms-endpoints):
+### Organization Prefix (Recommended)
+The **Organization Prefix** is a brand name that Brevo adds **before** your message content. This is especially recommended by U.S. carriers to ensure recipients recognize you.
 
-> **For marketing SMS**: On some routes, the short code will automatically replace the alphanumeric SenderID if you do not add an opt-out [STOP CODE].
+**Example:**
 
-**This affects:**
-- 🇮🇳 India (+91) - Most commonly affected
-- Some other international routes
-
-**Solution:** ✅ Enable "**Add [STOP CODE] to preserve sender name**" (enabled by default)
-
-### How It Works:
-
-1. **Without [STOP CODE]:**
-   - Message sent from: Random phone number (e.g., +918012345678)
-   - Your sender name is hidden
-
-2. **With [STOP CODE]:**
-   - Message sent from: Your sender name (e.g., "AHC")
-   - Brevo automatically replaces `[STOP CODE]` with an unsubscribe code
-   - Recipients can opt-out by replying with the code
-
-### Example:
-
-**Your message template:**
-```
-Hi {name}, your order is ready! [STOP CODE]
-```
+**Configuration:**
+- Sender Name: `AHC`
+- Organization Prefix: `AHC`
+- Message: `Hi {name}, your order is ready!`
 
 **What recipient sees:**
 ```
 From: AHC
-Message: Hi John, your order is ready! Reply STOP1234 to unsubscribe
+Message: AHC: Hi John, your order is ready!
 ```
 
-The `[STOP CODE]` is automatically replaced by Brevo with the actual unsubscribe code.
+**Important:** Keep your total message length (prefix + message) under 160 characters to avoid splitting into multiple SMS.
 
-**Note:** The checkbox is enabled by default for your convenience. You can disable it if sending transactional (non-marketing) messages where sender name replacement is not an issue.
+**Why use Organization Prefix?**
+- ✅ Better brand recognition
+- ✅ Higher trust from recipients  
+- ✅ Recommended by carriers
+- ✅ Helps preserve sender name on some routes (like India)
 
 ---
 
