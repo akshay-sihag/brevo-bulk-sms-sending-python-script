@@ -27,6 +27,29 @@ A Streamlit application for sending bulk SMS messages using the Brevo (formerly 
 pip install -r requirements.txt
 ```
 
+3. **Configure API Key (Recommended - More Secure):**
+
+   **Option A: Using Streamlit Secrets (Recommended)**
+   
+   For local development:
+   ```bash
+   # Copy the example secrets file
+   cp .streamlit/secrets.toml.example .streamlit/secrets.toml
+   
+   # Edit .streamlit/secrets.toml and add your API key
+   # BREVO_API_KEY = "your-actual-api-key-here"
+   ```
+   
+   For Streamlit Cloud deployment:
+   - Go to your app settings in Streamlit Cloud
+   - Click on "Secrets" in the left sidebar
+   - Add: `BREVO_API_KEY = "your-actual-api-key-here"`
+   - Click "Save"
+   
+   **Option B: Manual Entry (Alternative)**
+   
+   You can also enter the API key manually in the app sidebar when you run it.
+
 ## Usage
 
 1. **Run the Streamlit app:**
@@ -35,7 +58,8 @@ streamlit run sms_sender.py
 ```
 
 2. **Configure the app:**
-   - Enter your Brevo API Key in the sidebar
+   - If using secrets: API key will be automatically loaded ✅
+   - If not using secrets: Enter your Brevo API Key in the sidebar
    - Set the Sender Name (max 11 characters for alphanumeric)
    - Write your SMS message content
    - Optionally add a tag for tracking
@@ -108,9 +132,11 @@ Be aware of Brevo's rate limits. The app includes a 0.5-second delay between mes
 
 ## Security Notes
 
-- Never commit your API key to version control
-- API key is entered as a password field (hidden)
-- Consider using environment variables for production
+- **✅ Use Streamlit Secrets**: Store your API key in `.streamlit/secrets.toml` (automatically gitignored)
+- **Never commit your API key** to version control
+- The `secrets.toml` file is protected by `.gitignore`
+- For Streamlit Cloud: Use the built-in Secrets management in app settings
+- Manual entry option available as fallback (password field - hidden input)
 
 ## Dependencies
 
