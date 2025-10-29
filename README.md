@@ -4,13 +4,16 @@ A Streamlit application for sending bulk SMS messages using the Brevo (formerly 
 
 ## Features
 
-- 📤 Upload phone numbers from CSV or TXT files
+- 📤 Upload contact lists from **Excel, CSV, or TXT** files
+- 🎯 **Personalized SMS** with dynamic variables (e.g., `{name}`, `{username}`)
 - 📱 Automatic phone number validation and formatting
 - 🚀 Bulk SMS sending with real-time progress tracking
 - 📊 Live status updates for each SMS sent
-- 💾 Download results as CSV
+- 👁️ **Message preview** showing personalized content
+- 💾 Download detailed results as CSV
 - ⚙️ Configurable sender name, message content, and tags
 - ✅ Support for 10 and 11 digit phone numbers (US/Canada)
+- 🔐 Secure API key management via Streamlit secrets
 
 ## Prerequisites
 
@@ -61,32 +64,66 @@ streamlit run sms_sender.py
    - Write your SMS message content
    - Optionally add a tag for tracking
 
-3. **Upload phone numbers:**
-   - **CSV File**: Upload a CSV file and select the column containing phone numbers
-   - **TXT File**: Upload a text file with one phone number per line
+3. **Upload contact list:**
+   - **Excel File (.xlsx, .xls)**: Upload with columns for name and phone number
+   - **CSV File**: Upload with columns for name and phone number
+   - **TXT File**: Upload with one phone number per line (no personalization)
 
-4. **Phone Number Format:**
+4. **Map your columns (for Excel/CSV):**
+   - Select which column contains phone numbers
+   - Select which column contains names (optional, for personalization)
+   - Available variables will be shown (e.g., `{name}`, `{username}`, or any column name)
+
+5. **Write your message with personalization:**
+   - Example: `Hi {name}, your appointment is confirmed!`
+   - Use any column from your file as a variable: `{columnname}`
+   - Preview shows how the message will look for the first contact
+
+6. **Phone Number Format:**
    - 10 digits: `1234567890` → Converted to `11234567890` (adds +1)
    - 11 digits starting with 1: `11234567890` → Kept as is
    - Other formats will be marked as invalid
 
-5. **Send SMS:**
+7. **Send SMS:**
    - Review the valid/invalid numbers count
-   - Click "Send SMS to All Numbers"
-   - Watch real-time progress and results
-   - Download results as CSV when complete
+   - Preview personalized message
+   - Click "Send Personalized SMS to All"
+   - Watch real-time progress with names and personalized content
+   - Download detailed results as CSV when complete
 
 ## File Format Examples
 
-### CSV Format
+📥 **Download Sample Templates:**
+- `sample_contacts_template.xlsx` - Excel template
+- `sample_contacts_template.csv` - CSV template
+
+### Excel/CSV Format (with Personalization)
 ```csv
-phone_number,name
-1234567890,John Doe
-11234567891,Jane Smith
-9876543210,Bob Johnson
+name,phone_number,company
+John Doe,1234567890,ABC Corp
+Jane Smith,11234567891,XYZ Inc
+Bob Johnson,9876543210,Tech Ltd
 ```
 
-### TXT Format
+**Example SMS Message:**
+```
+Hi {name}, thank you for choosing {company}! Your order is ready for pickup.
+```
+
+**Result for first contact:**
+```
+Hi John Doe, thank you for choosing ABC Corp! Your order is ready for pickup.
+```
+
+### CSV Format (Basic)
+```csv
+phone_number
+1234567890
+11234567891
+9876543210
+```
+
+### TXT Format (No Personalization)
 ```
 1234567890
 11234567891
@@ -95,9 +132,16 @@ phone_number,name
 
 ## Features Explained
 
+### Personalized Messaging
+- **Dynamic variables**: Use `{columnname}` to insert data from your file
+- **Auto-aliasing**: `{name}` and `{username}` automatically map to your selected name column
+- **Any column**: Use any column from your Excel/CSV as a variable
+- **Live preview**: See exactly how messages will look before sending
+
 ### Real-time Progress
 - Live progress bar showing sending status
 - Real-time table updates with each SMS sent
+- Shows recipient names and message previews
 - Status indicators (✅ Sent / ❌ Failed)
 
 ### Phone Number Validation
@@ -107,10 +151,12 @@ phone_number,name
 - Shows invalid numbers before sending
 
 ### Results Tracking
+- Recipient name and phone number
+- Personalized message preview for each SMS
 - Message ID for each successful SMS
 - Error messages for failed SMS
 - Timestamp for each message
-- Downloadable CSV report
+- Downloadable CSV report with all details
 
 ## API Rate Limits
 

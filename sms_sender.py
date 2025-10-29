@@ -40,13 +40,14 @@ st.sidebar.header("📝 Message Content")
 sms_content = st.sidebar.text_area(
     "SMS Message",
     height=150,
-    help="If more than 160 characters, will be sent as multiple messages"
+    help="Use variables like {name}, {username}, or any column name from your file. Example: 'Hi {name}, your order is ready!'"
 )
 
-# Character count
+# Character count (based on template)
 char_count = len(sms_content)
 sms_count = (char_count // 160) + 1 if char_count > 0 else 0
-st.sidebar.info(f"Characters: {char_count} | SMS Parts: {sms_count}")
+st.sidebar.info(f"Template Characters: {char_count} | Estimated SMS Parts: {sms_count}")
+st.sidebar.markdown("💡 **Tip**: Use `{name}` or `{username}` for personalization")
 
 # Optional parameters
 st.sidebar.header("🔧 Optional Settings")
@@ -108,69 +109,140 @@ def send_sms(api_key, sender, recipient, content, sms_type="marketing", tag=None
     except Exception as e:
         return False, None, str(e)
 
+# Function to personalize message
+def personalize_message(template, row_data):
+    """
+    Replace variables in template with actual values from row data.
+    Variables format: {column_name}
+    """
+    message = template
+    for key, value in row_data.items():
+        placeholder = f"{{{key}}}"
+        message = message.replace(placeholder, str(value))
+    return message
+
 # Main content area
-st.header("📤 Upload Phone Numbers")
+st.header("📤 Upload Contact List")
 
 # File upload
 uploaded_file = st.file_uploader(
-    "Upload a CSV or TXT file with phone numbers",
-    type=["csv", "txt"],
-    help="CSV should have a column with phone numbers. TXT should have one number per line."
+    "Upload a file with contact information",
+    type=["csv", "xlsx", "xls", "txt"],
+    help="Excel/CSV should have columns for name and phone number. TXT should have one number per line."
 )
 
+contacts_df = None
 phone_numbers = []
 
 if uploaded_file is not None:
     try:
-        # Try to read as CSV first
+        # Read file based on type
         if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file)
-            st.write("**Preview of uploaded file:**")
-            st.dataframe(df.head(), use_container_width=True)
-            
-            # Let user select the column with phone numbers
-            phone_column = st.selectbox(
-                "Select the column containing phone numbers:",
-                options=df.columns.tolist()
-            )
-            
-            if phone_column:
-                phone_numbers = df[phone_column].tolist()
+            contacts_df = pd.read_csv(uploaded_file)
+        elif uploaded_file.name.endswith(('.xlsx', '.xls')):
+            contacts_df = pd.read_excel(uploaded_file)
         else:
             # Read as text file (one number per line)
             content = uploaded_file.read().decode('utf-8')
             phone_numbers = [line.strip() for line in content.split('\n') if line.strip()]
             st.write(f"**Found {len(phone_numbers)} phone numbers in the file**")
+            st.write("**Sample phone numbers:**", phone_numbers[:5])
+        
+        # If we have a dataframe (CSV or Excel)
+        if contacts_df is not None:
+            st.write("**Preview of uploaded file:**")
+            st.dataframe(contacts_df.head(), use_container_width=True)
             
-        # Show sample of phone numbers
-        if phone_numbers:
-            st.write("**Sample phone numbers:**")
-            st.write(phone_numbers[:5])
+            # Column mapping
+            st.subheader("📋 Map Your Columns")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                phone_column = st.selectbox(
+                    "Select Phone Number Column:",
+                    options=contacts_df.columns.tolist(),
+                    help="Column containing phone numbers"
+                )
+            
+            with col2:
+                name_column = st.selectbox(
+                    "Select Name Column (Optional):",
+                    options=["None"] + contacts_df.columns.tolist(),
+                    help="Column containing names for personalization"
+                )
+            
+            # Show available variables
+            if name_column != "None":
+                st.info(f"💡 Use `{{{name_column}}}` in your message to personalize with names")
+                # Create a mapping for common aliases
+                contacts_df['name'] = contacts_df[name_column]
+                contacts_df['username'] = contacts_df[name_column]
+            
+            # Show all available variables
+            available_vars = [f"{{{col}}}" for col in contacts_df.columns]
+            st.markdown(f"**Available variables:** {', '.join(available_vars)}")
+            
+            # Preview personalized message
+            if sms_content and len(contacts_df) > 0:
+                st.subheader("👁️ Message Preview")
+                sample_row = contacts_df.iloc[0].to_dict()
+                preview_message = personalize_message(sms_content, sample_row)
+                st.text_area("Preview (first contact):", preview_message, height=100, disabled=True)
             
     except Exception as e:
         st.error(f"Error reading file: {str(e)}")
 
 # Process and send SMS
-if phone_numbers:
+# Determine if we're using dataframe (with personalization) or simple phone list
+use_personalization = contacts_df is not None and phone_column is not None
+data_available = use_personalization or len(phone_numbers) > 0
+
+if data_available:
     st.header("🚀 Send SMS")
+    
+    # Prepare contact list
+    contact_list = []
+    
+    if use_personalization:
+        # Using dataframe with personalization
+        for idx, row in contacts_df.iterrows():
+            phone = row[phone_column]
+            contact_list.append({
+                'phone': phone,
+                'data': row.to_dict()
+            })
+        total_contacts = len(contact_list)
+    else:
+        # Using simple phone number list
+        for phone in phone_numbers:
+            contact_list.append({
+                'phone': phone,
+                'data': {}
+            })
+        total_contacts = len(contact_list)
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Total Numbers", len(phone_numbers))
+        st.metric("Total Contacts", total_contacts)
     
     # Validate all numbers first
-    formatted_numbers = []
+    formatted_contacts = []
     invalid_numbers = []
     
-    for phone in phone_numbers:
+    for contact in contact_list:
+        phone = contact['phone']
         formatted = format_phone_number(phone)
         if formatted:
-            formatted_numbers.append((phone, formatted))
+            formatted_contacts.append({
+                'original': phone,
+                'formatted': formatted,
+                'data': contact['data']
+            })
         else:
             invalid_numbers.append(phone)
     
     with col2:
-        st.metric("Valid Numbers", len(formatted_numbers))
+        st.metric("Valid Numbers", len(formatted_contacts))
     with col3:
         st.metric("Invalid Numbers", len(invalid_numbers))
     
@@ -184,7 +256,7 @@ if phone_numbers:
     error_messages = []
     
     if not api_key:
-        error_messages.append("⚠️ Please enter your Brevo API Key")
+        error_messages.append("⚠️ API Key not found")
         ready_to_send = False
     
     if not sender_name:
@@ -195,7 +267,7 @@ if phone_numbers:
         error_messages.append("⚠️ Please enter SMS message content")
         ready_to_send = False
     
-    if len(formatted_numbers) == 0:
+    if len(formatted_contacts) == 0:
         error_messages.append("⚠️ No valid phone numbers to send to")
         ready_to_send = False
     
@@ -205,7 +277,8 @@ if phone_numbers:
             st.error(msg)
     
     # Send button
-    if st.button("📨 Send SMS to All Numbers", type="primary", disabled=not ready_to_send):
+    send_label = "📨 Send Personalized SMS to All" if use_personalization else "📨 Send SMS to All Numbers"
+    if st.button(send_label, type="primary", disabled=not ready_to_send):
         st.header("📊 Sending Progress")
         
         # Progress bar
@@ -218,15 +291,27 @@ if phone_numbers:
         # Create a placeholder for real-time results
         results_placeholder = st.empty()
         
-        # Send SMS to each number
-        for idx, (original_number, formatted_number) in enumerate(formatted_numbers):
-            status_text.text(f"Sending to {original_number} ({idx + 1}/{len(formatted_numbers)})...")
+        # Send SMS to each contact
+        for idx, contact in enumerate(formatted_contacts):
+            original_number = contact['original']
+            formatted_number = contact['formatted']
+            contact_data = contact['data']
+            
+            # Personalize message if data available
+            if use_personalization and contact_data:
+                personalized_content = personalize_message(sms_content, contact_data)
+                display_name = contact_data.get(name_column, original_number) if name_column != "None" else original_number
+            else:
+                personalized_content = sms_content
+                display_name = original_number
+            
+            status_text.text(f"Sending to {display_name} ({idx + 1}/{len(formatted_contacts)})...")
             
             success, message_id, error = send_sms(
                 api_key=api_key,
                 sender=sender_name,
                 recipient=formatted_number,
-                content=sms_content,
+                content=personalized_content,
                 sms_type="marketing",
                 tag=tag,
                 unicode_enabled=unicode_enabled
@@ -234,8 +319,10 @@ if phone_numbers:
             
             # Record result
             result = {
+                "Name": display_name if use_personalization else "N/A",
                 "Original Number": original_number,
                 "Formatted Number": formatted_number,
+                "Message Preview": personalized_content[:50] + "..." if len(personalized_content) > 50 else personalized_content,
                 "Status": "✅ Sent" if success else "❌ Failed",
                 "Message ID": message_id if success else "N/A",
                 "Error": error if error else "",
@@ -244,7 +331,7 @@ if phone_numbers:
             results.append(result)
             
             # Update progress
-            progress = (idx + 1) / len(formatted_numbers)
+            progress = (idx + 1) / len(formatted_contacts)
             progress_bar.progress(progress)
             
             # Display real-time results

@@ -44,10 +44,14 @@ Thumbs.db
 .env
 .env.local
 
-# CSV/TXT files (uploaded data)
+# CSV/TXT/Excel files (uploaded data)
 *.csv
 *.txt
+*.xlsx
+*.xls
 !requirements.txt
+!sample_contacts_template.csv
+!sample_contacts_template.xlsx
 
 # Logs
 *.log
