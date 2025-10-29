@@ -209,22 +209,63 @@ if uploaded_file is not None:
             st.write("**Preview of uploaded file:**")
             st.dataframe(contacts_df.head(), use_container_width=True)
             
+            # Auto-detect phone and name columns
+            def auto_detect_column(columns, keywords):
+                """Auto-detect column based on keywords (case-insensitive)"""
+                for col in columns:
+                    col_lower = str(col).lower()
+                    for keyword in keywords:
+                        if keyword in col_lower:
+                            return col
+                return None
+            
+            # Phone column keywords
+            phone_keywords = ['phone', 'mobile', 'number', 'contact', 'cell', 'tel']
+            detected_phone = auto_detect_column(contacts_df.columns, phone_keywords)
+            
+            # Name column keywords
+            name_keywords = ['name', 'customer', 'client', 'user', 'recipient', 'contact']
+            detected_name = auto_detect_column(contacts_df.columns, name_keywords)
+            
             # Column mapping
             st.subheader("📋 Map Your Columns")
+            
+            # Show auto-detection results
+            if detected_phone or detected_name:
+                auto_detected = []
+                if detected_phone:
+                    auto_detected.append(f"📱 Phone: `{detected_phone}`")
+                if detected_name:
+                    auto_detected.append(f"👤 Name: `{detected_name}`")
+                st.success(f"✨ Auto-detected: {' | '.join(auto_detected)}")
+            
             col1, col2 = st.columns(2)
             
             with col1:
+                # Set default index for phone column
+                phone_options = contacts_df.columns.tolist()
+                default_phone_index = phone_options.index(detected_phone) if detected_phone and detected_phone in phone_options else 0
+                
                 phone_column = st.selectbox(
                     "Select Phone Number Column:",
-                    options=contacts_df.columns.tolist(),
-                    help="Column containing phone numbers"
+                    options=phone_options,
+                    index=default_phone_index,
+                    help="Column containing phone numbers (auto-detected if possible)"
                 )
             
             with col2:
+                # Set default index for name column
+                name_options = ["None"] + contacts_df.columns.tolist()
+                if detected_name and detected_name in contacts_df.columns:
+                    default_name_index = name_options.index(detected_name)
+                else:
+                    default_name_index = 0
+                
                 name_column = st.selectbox(
                     "Select Name Column (Optional):",
-                    options=["None"] + contacts_df.columns.tolist(),
-                    help="Column containing names for personalization"
+                    options=name_options,
+                    index=default_name_index,
+                    help="Column containing names for personalization (auto-detected if possible)"
                 )
             
             # Show available variables
