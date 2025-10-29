@@ -21,20 +21,26 @@ st.sidebar.header("⚙️ Configuration")
 
 # API Key - Check secrets first, then allow manual input
 api_key = None
+secrets_loaded = False
+
 try:
     # Try to get API key from Streamlit secrets
-    api_key = st.secrets.get("BREVO_API_KEY", None)
-    if api_key:
-        st.sidebar.success("✅ API Key loaded from secrets")
-except Exception:
+    if "BREVO_API_KEY" in st.secrets:
+        api_key = st.secrets["BREVO_API_KEY"]
+        if api_key:
+            secrets_loaded = True
+            st.sidebar.success("🔐 API Key loaded from secrets")
+except (FileNotFoundError, KeyError):
     pass
 
 # If no API key in secrets, show input field
-if not api_key:
+if not secrets_loaded:
+    st.sidebar.info("ℹ️ To hide this field, configure BREVO_API_KEY in Streamlit secrets")
     api_key = st.sidebar.text_input(
         "Brevo API Key",
         type="password",
-        help="Enter your Brevo API key from SMTP & API settings or configure in secrets"
+        help="Enter your Brevo API key from SMTP & API settings or configure in secrets",
+        value=""
     )
 
 # Sender name input
