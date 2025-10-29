@@ -52,6 +52,7 @@ Thumbs.db
 !requirements.txt
 !sample_contacts_template.csv
 !sample_contacts_template.xlsx
+!test_india_contacts.csv
 
 # Logs
 *.log

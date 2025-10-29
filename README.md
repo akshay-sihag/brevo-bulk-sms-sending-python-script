@@ -7,12 +7,12 @@ A Streamlit application for sending bulk SMS messages using the Brevo (formerly 
 - 📤 Upload contact lists from **Excel, CSV, or TXT** files
 - 🎯 **Personalized SMS** with dynamic variables (e.g., `{name}`, `{username}`)
 - 📱 Automatic phone number validation and formatting
+- 🌍 **Multi-country support**: US/Canada (+1), India (+91), UK (+44), Australia, Singapore, UAE, Saudi Arabia
 - 🚀 Bulk SMS sending with real-time progress tracking
 - 📊 Live status updates for each SMS sent
 - 👁️ **Message preview** showing personalized content
 - 💾 Download detailed results as CSV
 - ⚙️ Configurable sender name, message content, and tags
-- ✅ Support for 10 and 11 digit phone numbers (US/Canada)
 - 🔐 Secure API key management via Streamlit secrets
 
 ## Prerequisites
@@ -60,6 +60,7 @@ streamlit run sms_sender.py
 
 2. **Configure the app:**
    - API key will be automatically loaded from secrets ✅
+   - **Select your country code** from the dropdown (e.g., 🇮🇳 India +91, 🇺🇸 US/Canada +1)
    - Set the Sender Name (max 11 characters for alphanumeric)
    - Write your SMS message content
    - Optionally add a tag for tracking
@@ -80,9 +81,20 @@ streamlit run sms_sender.py
    - Preview shows how the message will look for the first contact
 
 6. **Phone Number Format:**
-   - 10 digits: `1234567890` → Converted to `11234567890` (adds +1)
-   - 11 digits starting with 1: `11234567890` → Kept as is
-   - Other formats will be marked as invalid
+   
+   The app automatically formats phone numbers based on the selected country:
+   
+   **For India (+91):**
+   - 10 digits: `9876543210` → Converted to `919876543210`
+   - 12 digits with code: `919876543210` → Kept as is
+   
+   **For US/Canada (+1):**
+   - 10 digits: `1234567890` → Converted to `11234567890`
+   - 11 digits with code: `11234567890` → Kept as is
+   
+   **For other countries:** Select from dropdown and use appropriate format
+   - Numbers without country code will have it added automatically
+   - Numbers with country code will be validated and kept as is
 
 7. **Send SMS:**
    - Review the valid/invalid numbers count
@@ -170,6 +182,39 @@ phone_number
 - Error messages for failed SMS
 - Timestamp for each message
 - Downloadable CSV report with all details
+
+## Testing with Your Phone Number
+
+### For Indian Numbers (+91)
+
+1. **Create a test CSV file** with your number:
+```csv
+customer_name,phone_number,company
+Your Name,9876543210,Test Company
+```
+(Use your actual 10-digit Indian mobile number)
+
+2. **In the app:**
+   - Select **"🇮🇳 India (+91)"** from the country dropdown
+   - Upload your test CSV file
+   - Write a test message: `Hi {name}, this is a test from {company}!`
+   - Review the preview
+   - Send to test!
+
+3. **Number format:** Indian numbers are 10 digits (without +91)
+   - App will format `9876543210` → `919876543210` for Brevo API
+
+### For Other Countries
+
+Simply select your country from the dropdown and use the appropriate number format:
+- 🇺🇸 US/Canada: 10 digits
+- 🇬🇧 UK: 10 digits
+- 🇦🇺 Australia: 9 digits
+- 🇸🇬 Singapore: 8 digits
+- 🇦🇪 UAE: 9 digits
+- 🇸🇦 Saudi Arabia: 9 digits
+
+A test file `test_india_contacts.csv` is included in the repository for reference.
 
 ## API Rate Limits
 

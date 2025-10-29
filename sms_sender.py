@@ -51,11 +51,35 @@ st.sidebar.markdown("💡 **Tip**: Use `{name}` or `{username}` for personalizat
 
 # Optional parameters
 st.sidebar.header("🔧 Optional Settings")
+
+# Country code selector
+country_options = {
+    "🇺🇸 United States/Canada (+1)": {"code": "1", "length": 10},
+    "🇮🇳 India (+91)": {"code": "91", "length": 10},
+    "🇬🇧 United Kingdom (+44)": {"code": "44", "length": 10},
+    "🇦🇺 Australia (+61)": {"code": "61", "length": 9},
+    "🇸🇬 Singapore (+65)": {"code": "65", "length": 8},
+    "🇦🇪 UAE (+971)": {"code": "971", "length": 9},
+    "🇸🇦 Saudi Arabia (+966)": {"code": "966", "length": 9},
+}
+
+selected_country = st.sidebar.selectbox(
+    "Select Country Code:",
+    options=list(country_options.keys()),
+    index=0,
+    help="Choose the country code for your phone numbers"
+)
+
+country_code = country_options[selected_country]["code"]
+expected_length = country_options[selected_country]["length"]
+
+st.sidebar.info(f"📱 Expected format: {expected_length} digits (without country code)")
+
 tag = st.sidebar.text_input("Tag (Optional)", help="Tag for tracking messages")
 unicode_enabled = st.sidebar.checkbox("Unicode Enabled", value=True)
 
 # Function to validate and format phone number
-def format_phone_number(phone):
+def format_phone_number(phone, country_code, expected_length):
     """
     Format phone number based on length and country code.
     Returns formatted number with country code or None if invalid.
@@ -63,12 +87,18 @@ def format_phone_number(phone):
     # Remove any non-digit characters
     phone = re.sub(r'\D', '', str(phone))
     
-    # Check if it's 11 digits and starts with 1 (US/Canada)
-    if len(phone) == 11 and phone.startswith('1'):
-        return phone  # Keep as is: 1XXXXXXXXXX
-    # Check if it's 10 digits (assume US/Canada, add +1)
-    elif len(phone) == 10:
-        return '1' + phone  # Add country code: 1XXXXXXXXXX
+    # Check if it already has the country code
+    if phone.startswith(country_code) and len(phone) == len(country_code) + expected_length:
+        return phone  # Already formatted correctly
+    
+    # Check if it's the expected length (without country code)
+    elif len(phone) == expected_length:
+        return country_code + phone  # Add country code
+    
+    # Check if it might be the full number with country code
+    elif len(phone) == len(country_code) + expected_length:
+        return phone  # Assume it's already complete
+    
     else:
         return None  # Invalid format
 
@@ -240,7 +270,7 @@ if data_available:
     
     for contact in contact_list:
         phone = contact['phone']
-        formatted = format_phone_number(phone)
+        formatted = format_phone_number(phone, country_code, expected_length)
         if formatted:
             formatted_contacts.append({
                 'original': phone,
