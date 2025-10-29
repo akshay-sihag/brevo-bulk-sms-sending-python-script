@@ -63,6 +63,7 @@ streamlit run sms_sender.py
    - **Select your country code** from the dropdown (e.g., 🇮🇳 India +91, 🇺🇸 US/Canada +1)
    - Set the Sender Name (max 11 characters for alphanumeric)
    - Write your SMS message content
+   - **Enable "Add [STOP CODE]"** (checked by default) - Required to show sender name on most routes
    - Optionally add a tag for tracking
 
 3. **Upload contact list:**
@@ -182,6 +183,50 @@ phone_number
 - Error messages for failed SMS
 - Timestamp for each message
 - Downloadable CSV report with all details
+
+## 📛 Sender Name vs Phone Number Issue
+
+### Why Am I Seeing a Phone Number Instead of Sender Name?
+
+According to [Brevo's SMS API documentation](https://developers.brevo.com/docs/transactional-sms-endpoints):
+
+> **For marketing SMS**: On some routes, the short code will automatically replace the alphanumeric SenderID if you do not add an opt-out [STOP CODE].
+
+**This affects:**
+- 🇮🇳 India (+91) - Most commonly affected
+- Some other international routes
+
+**Solution:** ✅ Enable "**Add [STOP CODE] to preserve sender name**" (enabled by default)
+
+### How It Works:
+
+1. **Without [STOP CODE]:**
+   - Message sent from: Random phone number (e.g., +918012345678)
+   - Your sender name is hidden
+
+2. **With [STOP CODE]:**
+   - Message sent from: Your sender name (e.g., "AHC")
+   - Brevo automatically replaces `[STOP CODE]` with an unsubscribe code
+   - Recipients can opt-out by replying with the code
+
+### Example:
+
+**Your message template:**
+```
+Hi {name}, your order is ready! [STOP CODE]
+```
+
+**What recipient sees:**
+```
+From: AHC
+Message: Hi John, your order is ready! Reply STOP1234 to unsubscribe
+```
+
+The `[STOP CODE]` is automatically replaced by Brevo with the actual unsubscribe code.
+
+**Note:** The checkbox is enabled by default for your convenience. You can disable it if sending transactional (non-marketing) messages where sender name replacement is not an issue.
+
+---
 
 ## Testing with Your Phone Number
 

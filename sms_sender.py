@@ -75,6 +75,13 @@ expected_length = country_options[selected_country]["length"]
 
 st.sidebar.info(f"📱 Expected format: {expected_length} digits (without country code)")
 
+# Add stop code option
+add_stop_code = st.sidebar.checkbox(
+    "Add [STOP CODE] to preserve sender name", 
+    value=True,
+    help="Required for marketing SMS to show sender name instead of phone number on some routes (like India). Brevo will replace [STOP CODE] with an unsubscribe code."
+)
+
 tag = st.sidebar.text_input("Tag (Optional)", help="Tag for tracking messages")
 unicode_enabled = st.sidebar.checkbox("Unicode Enabled", value=True)
 
@@ -226,7 +233,16 @@ if uploaded_file is not None:
                 st.subheader("👁️ Message Preview")
                 sample_row = contacts_df.iloc[0].to_dict()
                 preview_message = personalize_message(sms_content, sample_row)
-                st.text_area("Preview (first contact):", preview_message, height=100, disabled=True)
+                
+                # Add [STOP CODE] to preview if enabled
+                if add_stop_code and '[STOP CODE]' not in preview_message:
+                    preview_message_with_stop = preview_message + ' [STOP CODE]'
+                else:
+                    preview_message_with_stop = preview_message
+                
+                st.text_area("Preview (first contact):", preview_message_with_stop, height=100, disabled=True)
+                if add_stop_code:
+                    st.caption("✅ [STOP CODE] will be replaced by Brevo with an unsubscribe code to preserve sender name")
             
     except Exception as e:
         st.error(f"Error reading file: {str(e)}")
@@ -347,6 +363,10 @@ if data_available:
             else:
                 personalized_content = sms_content
                 display_name = original_number
+            
+            # Add [STOP CODE] if enabled (for marketing SMS to preserve sender name)
+            if add_stop_code and '[STOP CODE]' not in personalized_content:
+                personalized_content = personalized_content + ' [STOP CODE]'
             
             status_text.text(f"Sending to {display_name} ({idx + 1}/{len(formatted_contacts)})...")
             

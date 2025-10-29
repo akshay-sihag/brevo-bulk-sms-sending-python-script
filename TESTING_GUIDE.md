@@ -38,10 +38,13 @@ Akshay,9876543210,AHC
    - ✅ API Key will be loaded automatically (if configured in secrets)
    - 📱 **Select "🇮🇳 India (+91)"** from the country dropdown
    - 📝 Enter Sender Name (e.g., "AHC" or "Test")
+   - ✅ **Keep "Add [STOP CODE] to preserve sender name" CHECKED** (very important for India!)
    - ✏️ Write your test message:
      ```
      Hi {name}, this is a test SMS from {company}! If you receive this, the app works perfectly!
      ```
+   
+   **Important:** The [STOP CODE] checkbox ensures your sender name appears instead of a random phone number!
 
 ### Step 3: Upload and Preview
 
@@ -144,6 +147,19 @@ Hi {name}, testing SMS from {company}! Reply OK if received.
 - ✅ Verify your Brevo account is active
 - ✅ Check you have SMS credits in Brevo
 - ✅ Sender name should be max 11 characters
+
+### Sender Name Not Showing (Phone Number Instead)
+**Problem:** SMS arrives from a phone number instead of your sender name (e.g., "AHC")
+
+**Solution:**
+- ✅ Enable "Add [STOP CODE] to preserve sender name" checkbox
+- ✅ This is **critical for India (+91)** and some other routes
+- ✅ The checkbox is enabled by default - keep it checked!
+- ✅ Brevo will replace [STOP CODE] with an unsubscribe code
+- ✅ Your sender name will appear instead of a random number
+
+**Why this happens:**
+According to Brevo's documentation, marketing SMS on some routes (especially India) will use a short code phone number instead of your sender name unless you include [STOP CODE] for opt-out compliance.
 
 ### SMS Not Received
 - ✅ Check if status shows "✅ Sent" (not "❌ Failed")
