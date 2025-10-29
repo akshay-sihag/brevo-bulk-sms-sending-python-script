@@ -19,29 +19,14 @@ st.markdown("Send transactional SMS messages in bulk using Brevo API")
 # Sidebar for configuration
 st.sidebar.header("⚙️ Configuration")
 
-# API Key - Check secrets first, then allow manual input
-api_key = None
-secrets_loaded = False
-
+# API Key - Load from Streamlit secrets only
 try:
-    # Try to get API key from Streamlit secrets
-    if "BREVO_API_KEY" in st.secrets:
-        api_key = st.secrets["BREVO_API_KEY"]
-        if api_key:
-            secrets_loaded = True
-            st.sidebar.success("🔐 API Key loaded from secrets")
+    api_key = st.secrets["BREVO_API_KEY"]
+    st.sidebar.success("🔐 API Key loaded securely")
 except (FileNotFoundError, KeyError):
-    pass
-
-# If no API key in secrets, show input field
-if not secrets_loaded:
-    st.sidebar.info("ℹ️ To hide this field, configure BREVO_API_KEY in Streamlit secrets")
-    api_key = st.sidebar.text_input(
-        "Brevo API Key",
-        type="password",
-        help="Enter your Brevo API key from SMTP & API settings or configure in secrets",
-        value=""
-    )
+    st.sidebar.error("❌ API Key not found in secrets!")
+    st.sidebar.warning("Please configure BREVO_API_KEY in Streamlit secrets to use this app.")
+    st.stop()
 
 # Sender name input
 sender_name = st.sidebar.text_input(
