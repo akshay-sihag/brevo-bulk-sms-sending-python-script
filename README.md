@@ -6,13 +6,14 @@ A Streamlit application for sending bulk SMS messages using the Brevo (formerly 
 
 - 📤 Upload contact lists from **Excel, CSV, or TXT** files
 - 🎯 **Personalized SMS** with dynamic variables (e.g., `{name}`, `{username}`)
+- ✨ **Smart column detection** - Automatically finds phone and name columns
 - 📱 Automatic phone number validation and formatting
 - 🌍 **Multi-country support**: US/Canada (+1), India (+91), UK (+44), Australia, Singapore, UAE, Saudi Arabia
 - 🚀 Bulk SMS sending with real-time progress tracking
 - 📊 Live status updates for each SMS sent
 - 👁️ **Message preview** showing personalized content
 - 💾 Download detailed results as CSV
-- ⚙️ Configurable sender name, message content, and tags
+- ⚙️ Configurable sender name, organization prefix, and tags
 - 🔐 Secure API key management via Streamlit secrets
 
 ## Prerequisites
@@ -72,8 +73,10 @@ streamlit run sms_sender.py
    - **TXT File**: Upload with one phone number per line (no personalization)
 
 4. **Map your columns (for Excel/CSV):**
-   - Select which column contains phone numbers
-   - Select which column contains names (optional, for personalization)
+   - **Auto-detection**: App automatically detects phone and name columns based on keywords!
+     - Phone: Looks for "phone", "mobile", "number", "contact", "cell", "tel"
+     - Name: Looks for "name", "customer", "client", "user", "recipient"
+   - You can manually change the selection if auto-detection is incorrect
    - Available variables will be shown (e.g., `{name}`, `{username}`, or any column name)
 
 5. **Write your message with personalization:**
