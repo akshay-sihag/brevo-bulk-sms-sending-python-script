@@ -299,7 +299,7 @@ if uploaded_file is not None:
                 
                 # Add opt-out if enabled
                 if add_stop_code and stop_text:
-                    complete_preview = f"{preview_message}. {stop_text}"
+                    complete_preview = f"{preview_message} {stop_text}"
                 
                 # Show with organization prefix if provided
                 if org_prefix:
@@ -436,7 +436,7 @@ if data_available:
             
             # Add opt-out text if enabled
             if add_stop_code and stop_text:
-                personalized_content = f"{personalized_content}. {stop_text}"
+                personalized_content = f"{personalized_content} {stop_text}"
             
             status_text.text(f"Sending to {display_name} ({idx + 1}/{len(formatted_contacts)})...")
             
