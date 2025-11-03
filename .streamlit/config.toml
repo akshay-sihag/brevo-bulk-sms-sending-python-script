@@ -1,0 +1,17 @@
+# Streamlit Configuration
+
+[server]
+# Disable file watcher to prevent auto-refresh during SMS sending
+fileWatcherType = "none"
+
+# Increase timeout for long-running operations (in seconds)
+maxUploadSize = 200
+
+[browser]
+# Prevent browser from collecting usage stats
+gatherUsageStats = false
+
+[runner]
+# Prevent automatic reruns when script changes
+fastReruns = false
+

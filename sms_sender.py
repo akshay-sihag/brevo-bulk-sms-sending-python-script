@@ -12,9 +12,17 @@ st.set_page_config(
     layout="wide"
 )
 
+# Initialize session state
+if 'sending_in_progress' not in st.session_state:
+    st.session_state.sending_in_progress = False
+
 # Title and description
 st.title("📱 Bulk SMS Sender")
 st.markdown("Send transactional SMS messages in bulk using Brevo API")
+
+# Warning if sending is in progress
+if st.session_state.sending_in_progress:
+    st.warning("⚠️ **SMS sending in progress!** Do not refresh the page or interact with the sidebar until complete.")
 
 # Sidebar for configuration
 st.sidebar.header("⚙️ Configuration")
@@ -416,8 +424,14 @@ if data_available:
     
     # Send button
     send_label = "📨 Send Personalized SMS to All" if use_personalization else "📨 Send SMS to All Numbers"
-    if st.button(send_label, type="primary", disabled=not ready_to_send):
+    button_disabled = not ready_to_send or st.session_state.sending_in_progress
+    
+    if st.button(send_label, type="primary", disabled=button_disabled):
+        # Set flag to prevent interruptions
+        st.session_state.sending_in_progress = True
+        
         st.header("📊 Sending Progress")
+        st.info("⏳ **Important**: Do not refresh the page or close this tab until sending is complete!")
         
         # Progress bar
         progress_bar = st.progress(0)
@@ -491,8 +505,12 @@ if data_available:
         # Final status
         status_text.text("✅ All messages processed!")
         
+        # Clear sending flag
+        st.session_state.sending_in_progress = False
+        
         # Summary
         st.header("📈 Summary")
+        st.success("🎉 **Sending completed!** You can now safely close this tab or start a new batch.")
         success_count = sum(1 for r in results if "✅" in r["Status"])
         failed_count = len(results) - success_count
         
