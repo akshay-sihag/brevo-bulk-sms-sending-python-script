@@ -85,6 +85,19 @@ st.sidebar.info(f"📱 Expected format: {expected_length} digits (without countr
 tag = st.sidebar.text_input("Tag (Optional)", help="Tag for tracking messages")
 unicode_enabled = st.sidebar.checkbox("Unicode Enabled", value=True)
 
+# SMS sending delay control
+st.sidebar.markdown("---")
+st.sidebar.markdown("**⏱️ Rate Limiting**")
+sms_delay = st.sidebar.slider(
+    "Delay between SMS (seconds):",
+    min_value=0.5,
+    max_value=10.0,
+    value=3.0,
+    step=0.5,
+    help="Time to wait between sending each SMS. Increase if you're hitting rate limits. Recommended: 3 seconds."
+)
+st.sidebar.caption(f"📊 Speed: ~{int(60/sms_delay)} SMS per minute")
+
 # Option to add STOP CODE for compliance
 st.sidebar.markdown("---")
 st.sidebar.markdown("**📋 Compliance (India & Some Routes)**")
@@ -472,8 +485,8 @@ if data_available:
             results_df = pd.DataFrame(results)
             results_placeholder.dataframe(results_df, use_container_width=True)
             
-            # Delay to avoid Brevo API rate limiting (1 SMS every 3 seconds)
-            time.sleep(3)
+            # Delay to avoid Brevo API rate limiting (configurable)
+            time.sleep(sms_delay)
         
         # Final status
         status_text.text("✅ All messages processed!")
