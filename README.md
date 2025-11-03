@@ -272,6 +272,13 @@ Be aware of Brevo's rate limits. The app includes a 0.5-second delay between mes
 
 ## Troubleshooting
 
+**Issue**: App refreshes in the middle of sending SMS
+- **Solution**: 
+  - ✅ **Fixed in latest version!** The app now prevents refreshes during sending
+  - Don't interact with sidebar or refresh page during sending
+  - Wait for "Sending completed!" message
+  - If it still happens, check your internet connection (Streamlit Cloud) or increase delay
+
 **Issue**: "Bad Request" error
 - **Solution**: Check your API key is correct and active
 
@@ -280,6 +287,9 @@ Be aware of Brevo's rate limits. The app includes a 0.5-second delay between mes
 
 **Issue**: All numbers showing as invalid
 - **Solution**: Check phone numbers are in correct format (10 or 11 digits)
+
+**Issue**: Brevo rejecting requests (rate limit)
+- **Solution**: Increase the delay slider (recommended: 3-5 seconds)
 
 ## Security Notes
 
