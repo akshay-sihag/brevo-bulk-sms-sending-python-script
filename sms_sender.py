@@ -91,12 +91,12 @@ st.sidebar.markdown("**⏱️ Rate Limiting**")
 sms_delay = st.sidebar.slider(
     "Delay between SMS (seconds):",
     min_value=0.5,
-    max_value=10.0,
+    max_value=60.0,
     value=3.0,
     step=0.5,
-    help="Time to wait between sending each SMS. Increase if you're hitting rate limits. Recommended: 3 seconds."
+    help="Time to wait between sending each SMS. Increase if you're hitting rate limits. Recommended: 3 seconds. Max: 60 seconds (1 minute)."
 )
-st.sidebar.caption(f"📊 Speed: ~{int(60/sms_delay)} SMS per minute")
+st.sidebar.caption(f"📊 Speed: ~{int(60/sms_delay)} SMS per minute | {round(sms_delay/60, 2)} min per SMS" if sms_delay >= 60 else f"📊 Speed: ~{int(60/sms_delay)} SMS per minute")
 
 # Option to add STOP CODE for compliance
 st.sidebar.markdown("---")
