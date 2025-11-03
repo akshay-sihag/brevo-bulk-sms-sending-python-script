@@ -472,8 +472,8 @@ if data_available:
             results_df = pd.DataFrame(results)
             results_placeholder.dataframe(results_df, use_container_width=True)
             
-            # Small delay to avoid rate limiting (adjust as needed)
-            time.sleep(0.5)
+            # Delay to avoid Brevo API rate limiting (1 SMS every 3 seconds)
+            time.sleep(3)
         
         # Final status
         status_text.text("✅ All messages processed!")
