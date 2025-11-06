@@ -537,8 +537,50 @@ if data_available:
             
             # Determine detailed status
             if success:
-                api_status = "✅ Accepted by Brevo"
-                can_retry = False
+                # Wait a moment for Brevo to process, then check actual status
+                time.sleep(2)  # Give Brevo time to process
+                
+                # Check actual delivery status from Brevo
+                events = check_sms_status(api_key, message_id=message_id, days=1)
+                
+                if events and len(events) > 0:
+                    latest_event = events[0]
+                    event_type = latest_event.get("event", "")
+                    event_reason = latest_event.get("reason", "")
+                    
+                    # Map actual Brevo status
+                    if event_type == "rejected":
+                        api_status = "❌ Rejected by Brevo"
+                        can_retry = True
+                        error = event_reason if event_reason else "Rejected by Brevo"
+                    elif event_type == "blocked":
+                        api_status = "🚫 Blocked by Carrier"
+                        can_retry = False
+                        error = event_reason if event_reason else "Blocked by carrier"
+                    elif event_type == "hardBounces":
+                        api_status = "❌ Hard Bounce"
+                        can_retry = False
+                        error = event_reason if event_reason else "Invalid number"
+                    elif event_type == "softBounces":
+                        api_status = "⚠️ Soft Bounce"
+                        can_retry = True
+                        error = event_reason if event_reason else "Temporary failure"
+                    elif event_type == "sent":
+                        api_status = "📤 Sent to Carrier"
+                        can_retry = False
+                    elif event_type == "accepted":
+                        api_status = "✅ Accepted for Delivery"
+                        can_retry = False
+                    elif event_type == "delivered":
+                        api_status = "✅ Delivered"
+                        can_retry = False
+                    else:
+                        api_status = "⏳ Processing"
+                        can_retry = False
+                else:
+                    # No event yet, might be still processing
+                    api_status = "⏳ Queued (check status later)"
+                    can_retry = False
             else:
                 if status_code == 400:
                     api_status = "❌ Bad Request"
@@ -592,23 +634,34 @@ if data_available:
         
         # Summary
         st.header("📈 Summary")
-        st.success("🎉 **Sending completed!** You can now safely close this tab or start a new batch.")
         
-        success_count = sum(1 for r in results if "✅" in r["API Status"])
-        failed_count = len(results) - success_count
+        # Count actual statuses
+        success_count = sum(1 for r in results if "✅" in r["API Status"] or "📤" in r["API Status"])
+        rejected_count = sum(1 for r in results if "❌ Rejected" in r["API Status"])
+        blocked_count = sum(1 for r in results if "🚫 Blocked" in r["API Status"])
+        failed_count = sum(1 for r in results if "❌" in r["API Status"] and "Rejected" not in r["API Status"])
         
-        col1, col2, col3 = st.columns(3)
+        if rejected_count > 0 or blocked_count > 0:
+            st.error(f"⚠️ **Campaign completed with {rejected_count + blocked_count} rejected/blocked messages!** Check details below.")
+        else:
+            st.success("🎉 **Sending completed!** You can now safely close this tab or start a new batch.")
+        
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("Total Processed", len(results))
         with col2:
-            st.metric("Accepted by Brevo", success_count, delta=None)
+            st.metric("✅ Delivered/Sent", success_count, delta=None)
         with col3:
-            st.metric("Failed at Source", failed_count, delta=None)
+            st.metric("❌ Rejected", rejected_count, delta=None, delta_color="inverse")
+        with col4:
+            st.metric("🚫 Blocked/Failed", blocked_count + failed_count, delta=None, delta_color="inverse")
         
-        # Show retry option if there are failed messages
-        if failed_count > 0:
-            st.header("🔄 Retry Failed Messages")
-            st.info(f"Found {failed_count} failed message(s) that can be retried.")
+        # Show retry option if there are failed/rejected messages
+        retryable_count = sum(1 for r in results if r.get("Can Retry", False))
+        
+        if retryable_count > 0:
+            st.header("🔄 Retry Failed/Rejected Messages")
+            st.info(f"Found {retryable_count} message(s) that can be retried (rejected, soft bounces, rate limited, etc.).")
             
             failed_results = [r for r in results if r.get("Can Retry", False)]
             
@@ -633,9 +686,33 @@ if data_available:
                         org_prefix=org_prefix if org_prefix else None
                     )
                     
+                    # Check actual status after retry
                     if success:
-                        api_status = "✅ Accepted by Brevo"
-                        can_retry = False
+                        # Wait and check actual status
+                        time.sleep(2)
+                        events = check_sms_status(api_key, message_id=message_id, days=1)
+                        
+                        if events and len(events) > 0:
+                            event_type = events[0].get("event", "")
+                            event_reason = events[0].get("reason", "")
+                            
+                            if event_type == "rejected":
+                                api_status = "❌ Rejected by Brevo"
+                                can_retry = True
+                                error = event_reason if event_reason else "Rejected by Brevo"
+                            elif event_type == "blocked":
+                                api_status = "🚫 Blocked by Carrier"
+                                can_retry = False
+                                error = event_reason if event_reason else "Blocked"
+                            elif event_type in ["sent", "accepted", "delivered"]:
+                                api_status = "✅ Sent Successfully"
+                                can_retry = False
+                            else:
+                                api_status = "⏳ Processing"
+                                can_retry = False
+                        else:
+                            api_status = "⏳ Queued"
+                            can_retry = False
                     else:
                         api_status = f"❌ Failed (HTTP {status_code})"
                         can_retry = True
