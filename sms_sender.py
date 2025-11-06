@@ -15,8 +15,6 @@ st.set_page_config(
 # Initialize session state
 if 'sending_in_progress' not in st.session_state:
     st.session_state.sending_in_progress = False
-if 'pause_requested' not in st.session_state:
-    st.session_state.pause_requested = False
 if 'results_history' not in st.session_state:
     st.session_state.results_history = []
 
@@ -479,26 +477,11 @@ if data_available:
         for msg in error_messages:
             st.error(msg)
     
-    # Send button and pause/resume controls
+    # Send button
     send_label = "📨 Send Personalized SMS to All" if use_personalization else "📨 Send SMS to All Numbers"
     button_disabled = not ready_to_send or st.session_state.sending_in_progress
     
-    col_btn1, col_btn2, col_btn3 = st.columns([2, 1, 1])
-    
-    with col_btn1:
-        send_button = st.button(send_label, type="primary", disabled=button_disabled, use_container_width=True)
-    
-    with col_btn2:
-        if st.session_state.sending_in_progress and not st.session_state.pause_requested:
-            if st.button("⏸️ Pause Campaign", type="secondary", use_container_width=True):
-                st.session_state.pause_requested = True
-                st.rerun()
-    
-    with col_btn3:
-        if st.session_state.pause_requested:
-            if st.button("▶️ Resume Campaign", type="secondary", use_container_width=True):
-                st.session_state.pause_requested = False
-                st.rerun()
+    send_button = st.button(send_label, type="primary", disabled=button_disabled, use_container_width=True)
     
     if send_button:
         # Set flag to prevent interruptions
@@ -589,13 +572,6 @@ if data_available:
             }
             results.append(result)
             
-            # Check for pause request
-            if st.session_state.pause_requested:
-                status_text.text("⏸️ Campaign paused by user")
-                st.session_state.results_history.extend(results)
-                st.warning("⏸️ Campaign paused! Resume to continue sending.")
-                break
-            
             # Update progress
             progress = (idx + 1) / len(formatted_contacts)
             progress_bar.progress(progress)
@@ -608,17 +584,15 @@ if data_available:
             time.sleep(sms_delay)
         
         # Final status
-        if not st.session_state.pause_requested:
-            status_text.text("✅ All messages processed!")
-            st.session_state.results_history.extend(results)
+        status_text.text("✅ All messages processed!")
+        st.session_state.results_history.extend(results)
         
         # Clear sending flag
         st.session_state.sending_in_progress = False
         
         # Summary
         st.header("📈 Summary")
-        if not st.session_state.pause_requested:
-            st.success("🎉 **Sending completed!** You can now safely close this tab or start a new batch.")
+        st.success("🎉 **Sending completed!** You can now safely close this tab or start a new batch.")
         
         success_count = sum(1 for r in results if "✅" in r["API Status"])
         failed_count = len(results) - success_count
