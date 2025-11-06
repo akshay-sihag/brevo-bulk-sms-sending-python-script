@@ -15,6 +15,10 @@ st.set_page_config(
 # Initialize session state
 if 'sending_in_progress' not in st.session_state:
     st.session_state.sending_in_progress = False
+if 'pause_requested' not in st.session_state:
+    st.session_state.pause_requested = False
+if 'results_history' not in st.session_state:
+    st.session_state.results_history = []
 
 # Title and description
 st.title("📱 Bulk SMS Sender")
@@ -150,7 +154,7 @@ def format_phone_number(phone, country_code, expected_length):
 def send_sms(api_key, sender, recipient, content, sms_type="marketing", tag=None, unicode_enabled=True, org_prefix=None):
     """
     Send SMS using Brevo API
-    Returns: (success: bool, message_id: str, error: str)
+    Returns: (success: bool, message_id: str, error: str, status_code: int)
     """
     url = "https://api.brevo.com/v3/transactionalSMS/send"
     
@@ -179,12 +183,65 @@ def send_sms(api_key, sender, recipient, content, sms_type="marketing", tag=None
         
         if response.status_code == 201:
             data = response.json()
-            return True, data.get("messageId", "N/A"), None
+            return True, data.get("messageId", "N/A"), None, 201
         else:
-            error_msg = response.json().get("message", response.text)
-            return False, None, error_msg
+            error_msg = response.json().get("message", response.text) if response.text else f"HTTP {response.status_code}"
+            return False, None, error_msg, response.status_code
     except Exception as e:
-        return False, None, str(e)
+        return False, None, str(e), 0
+
+# Function to check SMS delivery status
+def check_sms_status(api_key, message_id=None, phone_number=None, days=1):
+    """
+    Check SMS delivery status using Brevo events API
+    Returns: list of events or None if error
+    """
+    url = "https://api.brevo.com/v3/transactionalSMS/statistics/events"
+    
+    headers = {
+        "accept": "application/json",
+        "api-key": api_key
+    }
+    
+    params = {
+        "limit": 50,
+        "sort": "desc",
+        "days": days
+    }
+    
+    if phone_number:
+        params["phoneNumber"] = phone_number
+    
+    try:
+        response = requests.get(url, headers=headers, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            events = data.get("events", [])
+            if message_id:
+                # Filter by message ID
+                events = [e for e in events if str(e.get("messageId")) == str(message_id)]
+            return events
+        else:
+            return None
+    except Exception as e:
+        return None
+
+# Function to get delivery status description
+def get_delivery_status(event_type):
+    """
+    Convert event type to user-friendly status
+    """
+    status_map = {
+        "sent": "📤 Sent to carrier",
+        "delivered": "✅ Delivered",
+        "hardBounces": "❌ Hard Bounce",
+        "softBounces": "⚠️ Soft Bounce",
+        "blocked": "🚫 Blocked",
+        "rejected": "❌ Rejected",
+        "accepted": "✓ Accepted",
+        "unsubscribed": "🚫 Unsubscribed"
+    }
+    return status_map.get(event_type, f"❓ {event_type}")
 
 # Function to personalize message
 def personalize_message(template, row_data):
@@ -422,11 +479,28 @@ if data_available:
         for msg in error_messages:
             st.error(msg)
     
-    # Send button
+    # Send button and pause/resume controls
     send_label = "📨 Send Personalized SMS to All" if use_personalization else "📨 Send SMS to All Numbers"
     button_disabled = not ready_to_send or st.session_state.sending_in_progress
     
-    if st.button(send_label, type="primary", disabled=button_disabled):
+    col_btn1, col_btn2, col_btn3 = st.columns([2, 1, 1])
+    
+    with col_btn1:
+        send_button = st.button(send_label, type="primary", disabled=button_disabled, use_container_width=True)
+    
+    with col_btn2:
+        if st.session_state.sending_in_progress and not st.session_state.pause_requested:
+            if st.button("⏸️ Pause Campaign", type="secondary", use_container_width=True):
+                st.session_state.pause_requested = True
+                st.rerun()
+    
+    with col_btn3:
+        if st.session_state.pause_requested:
+            if st.button("▶️ Resume Campaign", type="secondary", use_container_width=True):
+                st.session_state.pause_requested = False
+                st.rerun()
+    
+    if send_button:
         # Set flag to prevent interruptions
         st.session_state.sending_in_progress = True
         
@@ -467,7 +541,7 @@ if data_available:
             
             status_text.text(f"Sending to {display_name} ({idx + 1}/{len(formatted_contacts)})...")
             
-            success, message_id, error = send_sms(
+            success, message_id, error, status_code = send_sms(
                 api_key=api_key,
                 sender=sender_name,
                 recipient=formatted_number,
@@ -478,18 +552,49 @@ if data_available:
                 org_prefix=org_prefix if org_prefix else None
             )
             
+            # Determine detailed status
+            if success:
+                api_status = "✅ Accepted by Brevo"
+                can_retry = False
+            else:
+                if status_code == 400:
+                    api_status = "❌ Bad Request"
+                elif status_code == 401:
+                    api_status = "❌ Unauthorized (Check API Key)"
+                elif status_code == 402:
+                    api_status = "❌ Insufficient Credits"
+                elif status_code == 403:
+                    api_status = "❌ Forbidden"
+                elif status_code == 404:
+                    api_status = "❌ Not Found"
+                elif status_code == 429:
+                    api_status = "⚠️ Rate Limited"
+                else:
+                    api_status = f"❌ Failed (HTTP {status_code})"
+                can_retry = True
+            
             # Record result
             result = {
                 "Name": display_name if use_personalization else "N/A",
                 "Original Number": original_number,
                 "Formatted Number": formatted_number,
                 "Message Preview": personalized_content[:50] + "..." if len(personalized_content) > 50 else personalized_content,
-                "Status": "✅ Sent" if success else "❌ Failed",
+                "Full Message": personalized_content,  # Store full message for retry
+                "API Status": api_status,
                 "Message ID": message_id if success else "N/A",
+                "Status Code": status_code,
                 "Error": error if error else "",
+                "Can Retry": can_retry,
                 "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
             results.append(result)
+            
+            # Check for pause request
+            if st.session_state.pause_requested:
+                status_text.text("⏸️ Campaign paused by user")
+                st.session_state.results_history.extend(results)
+                st.warning("⏸️ Campaign paused! Resume to continue sending.")
+                break
             
             # Update progress
             progress = (idx + 1) / len(formatted_contacts)
@@ -503,29 +608,155 @@ if data_available:
             time.sleep(sms_delay)
         
         # Final status
-        status_text.text("✅ All messages processed!")
+        if not st.session_state.pause_requested:
+            status_text.text("✅ All messages processed!")
+            st.session_state.results_history.extend(results)
         
         # Clear sending flag
         st.session_state.sending_in_progress = False
         
         # Summary
         st.header("📈 Summary")
-        st.success("🎉 **Sending completed!** You can now safely close this tab or start a new batch.")
-        success_count = sum(1 for r in results if "✅" in r["Status"])
+        if not st.session_state.pause_requested:
+            st.success("🎉 **Sending completed!** You can now safely close this tab or start a new batch.")
+        
+        success_count = sum(1 for r in results if "✅" in r["API Status"])
         failed_count = len(results) - success_count
         
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("Total Sent", len(results))
+            st.metric("Total Processed", len(results))
         with col2:
-            st.metric("Successful", success_count, delta=None)
+            st.metric("Accepted by Brevo", success_count, delta=None)
         with col3:
-            st.metric("Failed", failed_count, delta=None)
+            st.metric("Failed at Source", failed_count, delta=None)
+        
+        # Show retry option if there are failed messages
+        if failed_count > 0:
+            st.header("🔄 Retry Failed Messages")
+            st.info(f"Found {failed_count} failed message(s) that can be retried.")
+            
+            failed_results = [r for r in results if r.get("Can Retry", False)]
+            
+            if st.button("🔄 Retry All Failed Messages", type="secondary"):
+                st.session_state.sending_in_progress = True
+                
+                retry_progress_bar = st.progress(0)
+                retry_status_text = st.empty()
+                retry_results = []
+                
+                for idx, failed in enumerate(failed_results):
+                    retry_status_text.text(f"Retrying {failed['Name']} ({idx + 1}/{len(failed_results)})...")
+                    
+                    success, message_id, error, status_code = send_sms(
+                        api_key=api_key,
+                        sender=sender_name,
+                        recipient=failed['Formatted Number'],
+                        content=failed.get('Full Message', failed['Message Preview']),
+                        sms_type="marketing",
+                        tag=tag,
+                        unicode_enabled=unicode_enabled,
+                        org_prefix=org_prefix if org_prefix else None
+                    )
+                    
+                    if success:
+                        api_status = "✅ Accepted by Brevo"
+                        can_retry = False
+                    else:
+                        api_status = f"❌ Failed (HTTP {status_code})"
+                        can_retry = True
+                    
+                    retry_result = {
+                        "Name": failed['Name'],
+                        "Original Number": failed['Original Number'],
+                        "Formatted Number": failed['Formatted Number'],
+                        "Message Preview": failed['Message Preview'],
+                        "Full Message": failed.get('Full Message', failed['Message Preview']),
+                        "API Status": api_status,
+                        "Message ID": message_id if success else "N/A",
+                        "Status Code": status_code,
+                        "Error": error if error else "",
+                        "Can Retry": can_retry,
+                        "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    }
+                    retry_results.append(retry_result)
+                    
+                    retry_progress = (idx + 1) / len(failed_results)
+                    retry_progress_bar.progress(retry_progress)
+                    time.sleep(sms_delay)
+                
+                retry_status_text.text("✅ Retry completed!")
+                st.session_state.sending_in_progress = False
+                
+                # Show retry results
+                retry_success = sum(1 for r in retry_results if "✅" in r["API Status"])
+                st.success(f"Retry complete: {retry_success}/{len(retry_results)} succeeded")
+                
+                retry_df = pd.DataFrame(retry_results)
+                # Hide Full Message column
+                retry_display_df = retry_df.drop(columns=['Full Message'], errors='ignore')
+                st.dataframe(retry_display_df, use_container_width=True)
+                
+                # Update results history
+                st.session_state.results_history.extend(retry_results)
+        
+        # Check delivery status
+        st.header("📊 Check Delivery Status")
+        st.info("Check actual delivery status from Brevo (delivered, bounced, blocked, etc.)")
+        
+        if st.button("🔍 Check Delivery Status for All Messages", type="secondary"):
+            with st.spinner("Checking delivery status..."):
+                # Get all message IDs that were successfully sent
+                sent_messages = [r for r in results if r["Message ID"] != "N/A"]
+                
+                if len(sent_messages) == 0:
+                    st.warning("No messages were successfully sent to check status for.")
+                else:
+                    status_results = []
+                    
+                    # Check status for each message
+                    for msg in sent_messages:
+                        events = check_sms_status(api_key, message_id=msg["Message ID"], days=1)
+                        
+                        if events and len(events) > 0:
+                            # Get the latest event
+                            latest_event = events[0]
+                            delivery_status = get_delivery_status(latest_event.get("event", "unknown"))
+                            event_date = latest_event.get("date", "N/A")
+                            reason = latest_event.get("reason", "")
+                        else:
+                            delivery_status = "⏳ Pending"
+                            event_date = "N/A"
+                            reason = ""
+                        
+                        status_results.append({
+                            "Name": msg["Name"],
+                            "Phone": msg["Formatted Number"],
+                            "Message ID": msg["Message ID"],
+                            "Delivery Status": delivery_status,
+                            "Event Date": event_date,
+                            "Reason": reason
+                        })
+                    
+                    st.success(f"Checked delivery status for {len(status_results)} messages")
+                    status_df = pd.DataFrame(status_results)
+                    st.dataframe(status_df, use_container_width=True)
+                    
+                    # Download delivery status
+                    csv_status = status_df.to_csv(index=False)
+                    st.download_button(
+                        label="📥 Download Delivery Status as CSV",
+                        data=csv_status,
+                        file_name=f"delivery_status_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                        mime="text/csv"
+                    )
         
         # Download results
         st.header("💾 Download Results")
         results_df = pd.DataFrame(results)
-        csv = results_df.to_csv(index=False)
+        # Remove Full Message column from display (only used internally for retry)
+        display_df = results_df.drop(columns=['Full Message'], errors='ignore')
+        csv = display_df.to_csv(index=False)
         st.download_button(
             label="📥 Download Results as CSV",
             data=csv,

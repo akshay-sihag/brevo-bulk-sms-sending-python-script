@@ -279,17 +279,52 @@ Be aware of Brevo's rate limits. The app includes a 0.5-second delay between mes
   - Wait for "Sending completed!" message
   - If it still happens, check your internet connection (Streamlit Cloud) or increase delay
 
-**Issue**: "Bad Request" error
-- **Solution**: Check your API key is correct and active
+**Issue**: "Insufficient Credits" (HTTP 402)
+- **Solution**: 
+  - Add credits to your Brevo account
+  - Use the "Retry Failed Messages" button after adding credits
+
+**Issue**: "Rate Limited" (HTTP 429)
+- **Solution**: 
+  - Pause the campaign (⏸️ button)
+  - Increase the delay slider to 5+ seconds (recommended: 3-5 seconds)
+  - Wait 2-5 minutes for rate limit to reset
+  - Resume campaign or use "Retry Failed Messages"
+
+**Issue**: "Unauthorized" (HTTP 401)
+- **Solution**: 
+  - Check your API key is correct and active in secrets
+  - Verify the API key has SMS sending permissions in Brevo
+
+**Issue**: "Bad Request" (HTTP 400)
+- **Solution**: 
+  - Check phone number format is correct
+  - Verify sender name is max 11 characters
+  - Ensure message content is provided
 
 **Issue**: SMS not sending
-- **Solution**: Ensure sender name is max 11 characters and message content is provided
+- **Solution**: 
+  - Ensure sender name is max 11 characters and message content is provided
+  - Check the "API Status" column for specific error codes
+  - Use "Retry Failed Messages" after fixing issues
 
 **Issue**: All numbers showing as invalid
-- **Solution**: Check phone numbers are in correct format (10 or 11 digits)
+- **Solution**: 
+  - Check phone numbers are in correct format (10 or 11 digits)
+  - Verify you selected the correct country code
 
-**Issue**: Brevo rejecting requests (rate limit)
-- **Solution**: Increase the delay slider (recommended: 3-5 seconds)
+**Issue**: Delivery Status shows "Pending" or empty
+- **Solution**: 
+  - Wait 5-10 minutes after sending before checking
+  - Some carriers take up to 1 hour to report delivery
+  - Check again or verify in Brevo dashboard
+
+**Issue**: Many "Hard Bounce" or "Blocked" statuses
+- **Solution**: 
+  - Verify phone numbers are valid and active
+  - Check message content isn't flagged as spam
+  - Ensure opt-out text is included (if required)
+  - Review sender name is appropriate
 
 ## Security Notes
 
